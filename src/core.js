@@ -120,6 +120,8 @@ function planSync(ms=4000){ if(!serverModus()||!S||!S.id) return; clearTimeout(s
 async function sync(){
   if(!serverModus()||!S||!S.id||bezig) return; bezig=true;
   try{
+    // account gemaakt toen de server nog niet gekoppeld was: nu alsnog aanmelden, voortgang blijft staan
+    if(String(S.id).startsWith('LOKAAL-')){ const n=await api('nieuw',{naam:S.naam,klas:S.klas,stam:S.stam}); S.id=n.id; S.code=n.code; try{ localStorage.setItem(KEY,JSON.stringify(S)) }catch(e){} }
     const j = await api('sync',{id:S.id, code:S.code, staat:S});
     const terug = j.staat; S = mergeStaat(S, terug); S.id=terug.id||S.id; S.code=S.code||terug.code; if(terug.kmodus!==undefined) S.kmodus=terug.kmodus;
     try{ localStorage.setItem(KEY,JSON.stringify(S)) }catch(e){}
