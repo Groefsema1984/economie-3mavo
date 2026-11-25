@@ -2948,13 +2948,29 @@ function oudInlezen(o){
   return {levels, diploma:!!(o.m3&&o.m3.medal), minuten:Math.round(sec/60), munten:extraM*5};
 }
 function oudMelding(r){ return `Oude H3-voortgang ingelezen: ${r.levels} paragra${r.levels===1?'af':'fen'}${r.diploma?', diploma H3':''}, ${r.minuten} minuten oefentijd${r.munten?`, +${r.munten} munten`:''}.` }
-function oudBestand(f){ if(!f) return; const rd=new FileReader(); rd.onload=()=>{ try{ const r=oudInlezen(JSON.parse(rd.result)); melding(oudMelding(r),5000); go('wereld','h3') }catch(e){ melding(e.message||'Dit bestand kan ik niet lezen',4000) } }; rd.readAsText(f) }
+function oudStatus(t,fout){ const el=document.getElementById('oudStatus'); if(el){ el.textContent=t; el.style.color=fout?'#c0392b':''; } if(fout) melding(t,4000) }
+function oudTekst(tekst){ const x=JSON.parse(String(tekst).replace(/^﻿/,'').trim()); const r=oudInlezen(x); melding(oudMelding(r),6000); go('wereld','h3') }
+function oudBestand(f){ if(!f){ oudStatus('Geen bestand gekozen.',true); return }
+  oudStatus('Bestand "'+f.name+'" wordt gelezen…');
+  const rd=new FileReader();
+  rd.onerror=()=>oudStatus('Het bestand kon niet worden gelezen. Probeer het via "Plak de tekst".',true);
+  rd.onload=()=>{ try{ oudTekst(rd.result) }catch(e){ oudStatus((e&&e.message&&!/JSON|token/i.test(e.message))?e.message:'Dit is geen voortgangsbestand van de oude H3-game.',true) } };
+  rd.readAsText(f) }
+function oudPlak(){ const t=(document.getElementById('oudPlakVeld')||{}).value||''; if(!t.trim()){ oudStatus('Plak eerst de tekst in het vak.',true); return }
+  try{ oudTekst(t) }catch(e){ oudStatus((e&&e.message&&!/JSON|token/i.test(e.message))?e.message:'Deze tekst is niet compleet of geen voortgang van de oude game.',true) } }
 function oudVanApparaat(){ const o=oudeOpslag(); if(!o){ melding('Geen oude voortgang gevonden op dit apparaat'); return } try{ const r=oudInlezen(o); melding(oudMelding(r),5000); go('wereld','h3') }catch(e){ melding(e.message,4000) } }
 
 // blok voor het Account-scherm en een melding op de startpagina
 function oudBlok(){ const auto=oudeOpslag(); const al=S.oudImport;
-  return `<div class="sectie">Voortgang uit de oude H3-game</div><div class="kaart"><p class="zacht" style="margin-top:0">Heb je in de oude game (De Bank-stad) al levels gehaald? Neem ze mee naar H3. Bewaar in de oude game eerst je voortgang: Collectie › Bewaar voortgang (bestand). Kies dat bestand hier.${al?` <br>Laatst ingelezen op ${esc(al.datum)}. Opnieuw inlezen mag: je raakt niets kwijt.`:''}</p>
-   <div class="voet" style="justify-content:flex-start">${auto?`<button class="knop" onclick="oudVanApparaat()">Neem over van dit apparaat</button>`:''}<button class="knop ${auto?'zacht':''}" onclick="kiesBestand(oudBestand)">📂 Kies bestand uit de oude game</button></div></div>` }
+  return `<div class="sectie">Voortgang uit de oude H3-game</div><div class="kaart"><p class="zacht" style="margin-top:0">Heb je in de oude game (De Bank-stad) al levels gehaald? Neem ze mee naar H3. Bewaar in de oude game eerst je voortgang: Collectie › Bewaar voortgang (bestand) › Bewaar in Bestanden.${al?` <br>Laatst ingelezen op ${esc(al.datum)}. Opnieuw inlezen mag: je raakt niets kwijt.`:''}</p>
+   ${auto?`<div class="voet" style="justify-content:flex-start"><button class="knop" onclick="oudVanApparaat()">Neem over van dit apparaat</button></div>`:''}
+   <label class="label" for="oudInput">1. Kies het bestand uit de oude game</label>
+   <input id="oudInput" type="file" onchange="oudBestand(this.files&&this.files[0])" style="display:block;width:100%;font:inherit;padding:12px;border:2px dashed var(--lijn);border-radius:12px;background:var(--bg)">
+   <details style="margin-top:12px"><summary style="cursor:pointer"><b>Lukt het niet met een bestand? Plak de tekst</b></summary>
+    <p class="zacht" style="font-size:14px">Open het bestand (bijvoorbeeld in de app Bestanden), selecteer alle tekst, kopieer en plak die hieronder.</p>
+    <textarea id="oudPlakVeld" rows="4" style="width:100%;font:inherit;font-size:13px;padding:10px;border-radius:12px;border:1px solid var(--lijn)" placeholder="Plak hier de tekst uit je voortgangsbestand"></textarea>
+    <div class="voet" style="justify-content:flex-start"><button class="knop zacht" onclick="oudPlak()">Lees tekst in</button></div></details>
+   <p id="oudStatus" class="zacht" style="font-size:14px;margin-bottom:0" aria-live="polite"></p></div>` }
 
 // Account-scherm uitbreiden en bestand terugzetten slim maken (een oud bestand gaat via de import)
 { const _acc=SCHERMEN.account; SCHERMEN.account=function(){ return _acc().replace(/<p class="zacht" style="font-size:13px">Versie/,oudBlok()+'<p class="zacht" style="font-size:13px">Versie') } }
