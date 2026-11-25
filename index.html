@@ -1805,7 +1805,7 @@ account(){
     ${serverModus()?`<button class="knop zacht" onclick="sync().then(()=>go('account'))">Nu opslaan</button>`:''}</div>
    <div class="sectie">Reservekopie</div><div class="kaart"><p class="zacht" style="margin-top:0">Extra zekerheid: bewaar een bestand met je voortgang, of zet er een terug.</p>
     <div class="voet" style="justify-content:flex-start"><button class="knop zacht" onclick="exportBestand()">Bewaar bestand</button>
-    <label class="knop zacht">Zet bestand terug<input type="file" accept=".json,application/json" style="display:none" onchange="importBestand(this.files[0])"></label></div></div>
+    <button class="knop zacht" onclick="kiesBestand(f=>importBestand(f))">Zet bestand terug</button></div></div>
    <p class="zacht" style="font-size:13px">Versie ${VERSIE}</p></div>`;
 },
 docent(){
@@ -1832,6 +1832,9 @@ async function herstelAccount(){
   try{ const j=await api('herstel',{id,code}); S=Object.assign(nieuweStaat(),j.staat); S.id=id; S.code=code; bewaar(false); zetThema(); melding('Welkom terug, je voortgang is hersteld!'); go('home') }
   catch(e){ melding(e.message,4000) }
 }
+// bestand kiezen dat ook op de iPad werkt: een tijdelijk (zichtbaar gerenderd) invoerveld zonder typefilter
+function kiesBestand(cb){ const i=document.createElement('input'); i.type='file'; i.style.cssText='position:fixed;left:0;top:0;width:1px;height:1px;opacity:0';
+  document.body.appendChild(i); i.addEventListener('change',()=>{ const f=i.files&&i.files[0]; i.remove(); if(f) cb(f) }); i.click() }
 function exportBestand(){
   const b=new Blob([JSON.stringify(S)],{type:'application/json'}); const a=document.createElement('a');
   a.href=URL.createObjectURL(b); a.download=`Economie3M_${S.klas}_${S.naam.replace(/\s+/g,'_')}_${vandaag()}.json`; a.click();
@@ -2951,7 +2954,7 @@ function oudVanApparaat(){ const o=oudeOpslag(); if(!o){ melding('Geen oude voor
 // blok voor het Account-scherm en een melding op de startpagina
 function oudBlok(){ const auto=oudeOpslag(); const al=S.oudImport;
   return `<div class="sectie">Voortgang uit de oude H3-game</div><div class="kaart"><p class="zacht" style="margin-top:0">Heb je in de oude game (De Bank-stad) al levels gehaald? Neem ze mee naar H3. Bewaar in de oude game eerst je voortgang: Collectie › Bewaar voortgang (bestand). Kies dat bestand hier.${al?` <br>Laatst ingelezen op ${esc(al.datum)}. Opnieuw inlezen mag: je raakt niets kwijt.`:''}</p>
-   <div class="voet" style="justify-content:flex-start">${auto?`<button class="knop" onclick="oudVanApparaat()">Neem over van dit apparaat</button>`:''}<label class="knop ${auto?'zacht':''}">Kies bestand uit de oude game<input type="file" style="display:none" onchange="oudBestand(this.files[0])"></label></div></div>` }
+   <div class="voet" style="justify-content:flex-start">${auto?`<button class="knop" onclick="oudVanApparaat()">Neem over van dit apparaat</button>`:''}<button class="knop ${auto?'zacht':''}" onclick="kiesBestand(oudBestand)">📂 Kies bestand uit de oude game</button></div></div>` }
 
 // Account-scherm uitbreiden en bestand terugzetten slim maken (een oud bestand gaat via de import)
 { const _acc=SCHERMEN.account; SCHERMEN.account=function(){ return _acc().replace(/<p class="zacht" style="font-size:13px">Versie/,oudBlok()+'<p class="zacht" style="font-size:13px">Versie') } }

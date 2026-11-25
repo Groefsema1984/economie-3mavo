@@ -189,7 +189,7 @@ account(){
     ${serverModus()?`<button class="knop zacht" onclick="sync().then(()=>go('account'))">Nu opslaan</button>`:''}</div>
    <div class="sectie">Reservekopie</div><div class="kaart"><p class="zacht" style="margin-top:0">Extra zekerheid: bewaar een bestand met je voortgang, of zet er een terug.</p>
     <div class="voet" style="justify-content:flex-start"><button class="knop zacht" onclick="exportBestand()">Bewaar bestand</button>
-    <label class="knop zacht">Zet bestand terug<input type="file" accept=".json,application/json" style="display:none" onchange="importBestand(this.files[0])"></label></div></div>
+    <button class="knop zacht" onclick="kiesBestand(f=>importBestand(f))">Zet bestand terug</button></div></div>
    <p class="zacht" style="font-size:13px">Versie ${VERSIE}</p></div>`;
 },
 docent(){
@@ -216,6 +216,9 @@ async function herstelAccount(){
   try{ const j=await api('herstel',{id,code}); S=Object.assign(nieuweStaat(),j.staat); S.id=id; S.code=code; bewaar(false); zetThema(); melding('Welkom terug, je voortgang is hersteld!'); go('home') }
   catch(e){ melding(e.message,4000) }
 }
+// bestand kiezen dat ook op de iPad werkt: een tijdelijk (zichtbaar gerenderd) invoerveld zonder typefilter
+function kiesBestand(cb){ const i=document.createElement('input'); i.type='file'; i.style.cssText='position:fixed;left:0;top:0;width:1px;height:1px;opacity:0';
+  document.body.appendChild(i); i.addEventListener('change',()=>{ const f=i.files&&i.files[0]; i.remove(); if(f) cb(f) }); i.click() }
 function exportBestand(){
   const b=new Blob([JSON.stringify(S)],{type:'application/json'}); const a=document.createElement('a');
   a.href=URL.createObjectURL(b); a.download=`Economie3M_${S.klas}_${S.naam.replace(/\s+/g,'_')}_${vandaag()}.json`; a.click();

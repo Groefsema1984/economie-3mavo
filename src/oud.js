@@ -49,7 +49,7 @@ function oudVanApparaat(){ const o=oudeOpslag(); if(!o){ melding('Geen oude voor
 // blok voor het Account-scherm en een melding op de startpagina
 function oudBlok(){ const auto=oudeOpslag(); const al=S.oudImport;
   return `<div class="sectie">Voortgang uit de oude H3-game</div><div class="kaart"><p class="zacht" style="margin-top:0">Heb je in de oude game (De Bank-stad) al levels gehaald? Neem ze mee naar H3. Bewaar in de oude game eerst je voortgang: Collectie › Bewaar voortgang (bestand). Kies dat bestand hier.${al?` <br>Laatst ingelezen op ${esc(al.datum)}. Opnieuw inlezen mag: je raakt niets kwijt.`:''}</p>
-   <div class="voet" style="justify-content:flex-start">${auto?`<button class="knop" onclick="oudVanApparaat()">Neem over van dit apparaat</button>`:''}<label class="knop ${auto?'zacht':''}">Kies bestand uit de oude game<input type="file" style="display:none" onchange="oudBestand(this.files[0])"></label></div></div>` }
+   <div class="voet" style="justify-content:flex-start">${auto?`<button class="knop" onclick="oudVanApparaat()">Neem over van dit apparaat</button>`:''}<button class="knop ${auto?'zacht':''}" onclick="kiesBestand(oudBestand)">📂 Kies bestand uit de oude game</button></div></div>` }
 
 // Account-scherm uitbreiden en bestand terugzetten slim maken (een oud bestand gaat via de import)
 { const _acc=SCHERMEN.account; SCHERMEN.account=function(){ return _acc().replace(/<p class="zacht" style="font-size:13px">Versie/,oudBlok()+'<p class="zacht" style="font-size:13px">Versie') } }
