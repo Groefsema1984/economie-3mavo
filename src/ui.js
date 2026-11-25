@@ -46,7 +46,7 @@ welkom(){
    <div class="wrap" id="aanmelden" style="max-width:1000px"><div class="welkom-grid">
    <div class="kaart"><span class="eyebrow" style="color:var(--knop)">Eerste keer</span><h3 style="margin:6px 0 0">Ik ben nieuw</h3>
     <label class="label">Je voor- en achternaam</label><input type="text" id="wNaam" autocomplete="name">
-    <label class="label">Je groep</label><select id="wKlas">${opties}</select>
+    <label class="label">Je economiegroep (cluster)</label><select id="wKlas">${opties}</select>
     <div class="voet"><button class="knop vol" onclick="nieuwAccount()">Account maken</button></div></div>
    ${serverModus()?`<div class="kaart"><span class="eyebrow" style="color:var(--knop)">Terugkomen</span><h3 style="margin:6px 0 0">Ik heb al een account</h3>
     <p class="zacht" style="margin:6px 0 0;font-size:15px">Nieuwe iPad, of de app opnieuw geopend? Vul je speler-ID en herstelcode in. Je voortgang komt terug.</p>
@@ -441,7 +441,7 @@ function tekenDocent(){
   // gemiddelde per eindterm
   const etGem={}; Object.keys(EINDTERMEN).forEach(k=>{ const sc=sp.map(s=>{const et=s.et&&s.et[k]; if(!et||et.r.length<3) return null; let a=0,w=0; et.r.forEach((x,i)=>{a+=x*(i+1);w+=i+1}); return a/w*100}).filter(x=>x!=null); if(sc.length) etGem[k]={g:Math.round(sc.reduce((a,b)=>a+b,0)/sc.length),n:sc.length} });
   $('#dOut').innerHTML=`<div class="voet" style="justify-content:flex-start;margin:14px 0">
-    <select style="max-width:180px" onchange="dKlas=this.value;tekenDocent()"><option value="alle">Alle klassen</option>${klassen.map(k=>`<option ${k===dKlas?'selected':''}>${esc(k)}</option>`).join('')}</select>
+    <select style="max-width:180px" onchange="dKlas=this.value;tekenDocent()"><option value="alle">Alle clusters</option>${klassen.map(k=>`<option ${k===dKlas?'selected':''}>${esc(k)}</option>`).join('')}</select>
     <select style="max-width:240px" onchange="dSort=this.value;tekenDocent()"><option value="week" ${dSort==='week'?'selected':''}>Ranglijst: oefentijd deze week</option><option value="tijd" ${dSort==='tijd'?'selected':''}>Ranglijst: oefentijd totaal</option><option value="naam" ${dSort==='naam'?'selected':''}>Op naam</option></select>
     <button class="knop zacht" onclick="window.print()">Afdrukken</button></div>
    <div class="kaart tabelwrap"><table><thead><tr><th>#</th><th>Leerling</th><th>Klas</th><th>Deze week</th><th>Totaal</th><th>Voortgang</th>${DOMEINEN.map(d=>`<th title="${d.naam}">${d.icoon}</th>`).join('')}<th>Laatst</th><th>ID · code</th></tr></thead><tbody>

@@ -5,7 +5,7 @@
  */
 const CFG = {
   DOCENT_CODE: '1103',        // code voor het docentenscherm in de app (zelf wijzigen!)
-  KLASSEN: ['3M1', '3M2'],    // toegestane klassen (gelijk aan KLASSEN in de app)
+  KLASSEN: ['3m.ec1', '3m.ec2', '3m.ec3'],    // toegestane klassen (gelijk aan KLASSEN in de app)
   MAX_MISLUKT: 10             // na zoveel foute herstelpogingen wordt herstellen geblokkeerd
 };
 
