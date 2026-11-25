@@ -1423,7 +1423,8 @@ const EXAMEN = {vragen:[{"id":"ex.18-1.1","t":"ex","ex":"18-1","jaar":2018,"tv":
 // ===== Instellingen =====
 // URL van het Apps Script (web-app, eindigt op /exec). Leeg = alleen opslag op dit apparaat (testmodus).
 const DATA_ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbyosqsIuZqbOkFSfZ43sOVlHNNnMb_M-qOxsWVZx-yTb9F1XTX4wwsf-er3fSPdE3ERJg/exec";
-const KLASSEN = ['3m.ec1','3m.ec2','3m.ec3'];           // klassen waaruit leerlingen kiezen
+const KLASSEN = ['3m.ec1','3m.ec2','3m.ec3'];           // clusters (economiegroepen) waaruit leerlingen kiezen
+const STAMKLASSEN = ['3ma','3mb','3mc','3md'];          // stamklassen
 const KEY = 'eco3m-v1';                  // opslagsleutel op het apparaat
 const VERSIE = '1.0';
 const VRAGEN_PER_LEVEL = 8;
@@ -1489,7 +1490,7 @@ function parseGetal(s){ if(s==null) return NaN; s=String(s).trim().replace(/[−
 function nieuweStaat(){
   return {v:1, id:'', code:'', naam:'', klas:'', upd:0, aangemaakt:Date.now(),
     xp:0, mVerd:0, mUit:0, tijd:0, dag:{}, week:{},
-    lv:{}, toets:{}, vr:{}, et:{}, kaarten:[], badges:[], gekocht:['standaard'], thema:'standaard', herhaal:[], hgoed:{}}
+    stam:'', lv:{}, toets:{}, vr:{}, et:{}, kaarten:[], badges:[], gekocht:['standaard'], thema:'standaard', herhaal:[], hgoed:{}}
 }
 let S = null;
 
@@ -1660,6 +1661,7 @@ welkom(){
    <div class="kaart"><span class="eyebrow" style="color:var(--knop)">Eerste keer</span><h3 style="margin:6px 0 0">Ik ben nieuw</h3>
     <label class="label">Je voor- en achternaam</label><input type="text" id="wNaam" autocomplete="name">
     <label class="label">Je economiegroep (cluster)</label><select id="wKlas">${opties}</select>
+    <label class="label">Je klas</label><select id="wStam"><option value="">Kies je klas…</option>${STAMKLASSEN.map(k=>`<option>${k}</option>`).join('')}</select>
     <div class="voet"><button class="knop vol" onclick="nieuwAccount()">Account maken</button></div></div>
    ${serverModus()?`<div class="kaart"><span class="eyebrow" style="color:var(--knop)">Terugkomen</span><h3 style="margin:6px 0 0">Ik heb al een account</h3>
     <p class="zacht" style="margin:6px 0 0;font-size:15px">Nieuwe iPad, of de app opnieuw geopend? Vul je speler-ID en herstelcode in. Je voortgang komt terug.</p>
@@ -1704,7 +1706,7 @@ home(){
   return `<div class="wrap"><div class="dash">
    <aside class="links">
     <div class="kaart profielkaart"><div class="bg"></div><div class="avatar">${esc(initialen(S.naam))}</div>
-     <h2>${esc(S.naam)}</h2><div class="klas">${esc(S.klas||'')} · Economie 3 mavo</div>
+     <h2>${esc(S.naam)}</h2><div class="klas">${esc(S.klas||'')}${S.stam?' · '+esc(S.stam):''} · Economie 3 mavo</div>
      <div class="cijfers"><div><small>Minuten</small><span class="getal">${minuten(S.tijd)}</span></div><div><small>Diploma's</small><span class="getal">${dipl}/${WERELDEN.length}</span></div><div><small>Kaarten</small><span class="getal">${S.kaarten.length}</span></div></div>
      <div class="blok"><small>Je streak</small><div class="streak"><div class="vlam">🔥<b>${streak}</b>${streak===1?'week':'weken'}</div><div class="dagen">${dagen}</div></div></div>
      <div class="blok mijlpaal"><small>Punten en munten</small><b>⭐ ${S.xp}</b> &nbsp; <b>🪙 ${munten()}</b></div>
@@ -1793,7 +1795,8 @@ collectie(){
 account(){
   const st=serverModus()?(syncStatus==='ok'?`<span class="sync ok">✔ Opgeslagen op de server${syncTijd?' om '+new Date(syncTijd).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'}):''}</span>`:syncStatus==='fout'?`<span class="sync fout">Nog niet opgeslagen op de server (${esc(syncFout)}). Dit gebeurt vanzelf als er internet is.</span>`:'<span class="sync">Nog niet gesynchroniseerd</span>'):'<span class="sync">Testmodus: alleen op dit apparaat</span>';
   return `<div class="wrap" style="max-width:640px">${kop('Account','go(\'home\')')}
-   <div class="kaart"><p style="margin-top:0"><b>${esc(S.naam)}</b> · ${esc(S.klas)}</p>
+   <div class="kaart"><p style="margin-top:0"><b>${esc(S.naam)}</b> · ${esc(S.klas)}${S.stam?' · klas '+esc(S.stam):''}</p>
+    <label class="label">Je klas</label><select onchange="S.stam=this.value;bewaar();melding('Klas opgeslagen')" style="max-width:200px"><option value="">Kies je klas…</option>${STAMKLASSEN.map(k=>`<option ${S.stam===k?'selected':''}>${k}</option>`).join('')}</select>
     <p class="zacht" style="margin-bottom:2px">Speler-ID</p><div class="code">${esc(S.id||'–')}</div>
     <p class="zacht" style="margin-bottom:2px">Herstelcode</p><div class="code">${esc(S.code||'–')}</div>
     <p id="syncStat" style="margin-top:12px">${st}</p>
@@ -1812,11 +1815,12 @@ docent(){
 
 // ===== Account =====
 async function nieuwAccount(){
-  const naam=$('#wNaam').value.trim().replace(/\s+/g,' '), klas=$('#wKlas').value;
+  const naam=$('#wNaam').value.trim().replace(/\s+/g,' '), klas=$('#wKlas').value, stam=$('#wStam').value;
   if(naam.length<3||!naam.includes(' ')){ melding('Vul je voor- én achternaam in'); return }
-  S=nieuweStaat(); S.naam=naam; S.klas=klas;
+  if(!stam){ melding('Kies je klas'); return }
+  S=nieuweStaat(); S.naam=naam; S.klas=klas; S.stam=stam;
   if(serverModus()){
-    try{ const j=await api('nieuw',{naam,klas}); S.id=j.id; S.code=j.code; bewaar(false); await sync(); go('code'); }
+    try{ const j=await api('nieuw',{naam,klas,stam}); S.id=j.id; S.code=j.code; bewaar(false); await sync(); go('code'); }
     catch(e){ S=null; melding('Geen verbinding met de server. Probeer het opnieuw. ('+e.message+')',4000) }
   } else { S.id='LOKAAL-'+Math.random().toString(36).slice(2,6).toUpperCase(); bewaar(false); go('home') }
 }
@@ -2036,10 +2040,10 @@ function samenvatLokaal(){ return samenvat(S) }
 function samenvat(s){ // zelfde berekening als op de server
   const dom={}; DOMEINEN.forEach(d=>{ const sc=Object.keys(EINDTERMEN).filter(k=>EINDTERMEN[k].d===d.id).map(k=>{const et=(s.et||{})[k]; if(!et||et.r.length<3) return null; let a=0,w=0; et.r.forEach((x,i)=>{a+=x*(i+1);w+=i+1}); return Math.round(a/w*100)}).filter(x=>x!==null); dom[d.id]=sc.length?Math.round(sc.reduce((a,b)=>a+b,0)/sc.length):null });
   const fout={}; Object.entries(s.vr||{}).forEach(([k,r])=>{ if(r.f) fout[k]=r.f });
-  return {id:s.id,naam:s.naam,klas:s.klas,code:s.code,laatst:s.upd,tijd:s.tijd||0,tijdWeek:(s.week||{})[weekId()]||0,xp:s.xp||0,lv:s.lv||{},toets:s.toets||{},dom,fout,et:s.et||{},vr:s.vr||{},week:s.week||{},dag:s.dag||{},nk:(s.kaarten||[]).length,badges:s.badges||[],sprint:s.sprint||null,pt:s.pt||{},exr:s.exr||{},kv:s.kv||null,herhaal:(s.herhaal||[]).length,aangemaakt:s.aangemaakt||0,munten:(s.mVerd||0)-(s.mUit||0)};
+  return {stam:s.stam||'', id:s.id,naam:s.naam,klas:s.klas,code:s.code,laatst:s.upd,tijd:s.tijd||0,tijdWeek:(s.week||{})[weekId()]||0,xp:s.xp||0,lv:s.lv||{},toets:s.toets||{},dom,fout,et:s.et||{},vr:s.vr||{},week:s.week||{},dag:s.dag||{},nk:(s.kaarten||[]).length,badges:s.badges||[],sprint:s.sprint||null,pt:s.pt||{},exr:s.exr||{},kv:s.kv||null,herhaal:(s.herhaal||[]).length,aangemaakt:s.aangemaakt||0,munten:(s.mVerd||0)-(s.mUit||0)};
 }
 async function laadDocent(){ const c=$('#dCode').value.trim(); try{ const j=await api('overzicht',{docentcode:c}); toonDocent(j) }catch(e){ melding(e.message,4000) } }
-let D=null, dKlas='alle', dSort='week';
+let D=null, dKlas='alle', dStam='alle', dSort='week';
 function toonDocent(j){ D=j; tekenDocent() }
 function tekenDocent(){
   const klassen=[...new Set(D.spelers.map(s=>s.klas))].sort();
@@ -2715,10 +2719,12 @@ const tegel = (getal, label, sub) => `<div class="kaart" style="padding:14px"><d
 function tekenDocent(){
   const o=$('#dOut'); if(!o||!D) return;
   const klassen=[...new Set(D.spelers.map(s=>s.klas))].sort();
-  const sp=D.spelers.filter(s=>dKlas==='alle'||s.klas===dKlas);
+  const stams=[...new Set(D.spelers.map(s=>s.stam).filter(Boolean))].sort();
+  const sp=D.spelers.filter(s=>(dKlas==='alle'||s.klas===dKlas)&&(dStam==='alle'||s.stam===dStam));
   const tabs=[['overzicht','Overzicht'],['klassikaal','Klassikaal'],['leerlingen','Leerlingen'],['vragen','Vragen'],['eindtermen','Eindtermen'],['examen','Examentrainer']];
   const kopbalk=`<div class="voet" style="justify-content:flex-start;margin:0 0 12px;align-items:center">
-    <select style="max-width:170px" onchange="dKlas=this.value;dSel=null;tekenDocent()"><option value="alle">Alle groepen</option>${klassen.map(k=>`<option ${k===dKlas?'selected':''}>${esc(k)}</option>`).join('')}</select>
+    <select style="max-width:170px" onchange="dKlas=this.value;dSel=null;tekenDocent()"><option value="alle">Alle clusters</option>${klassen.map(k=>`<option ${k===dKlas?'selected':''}>${esc(k)}</option>`).join('')}</select>
+    <select style="max-width:150px" onchange="dStam=this.value;dSel=null;tekenDocent()"><option value="alle">Alle klassen</option>${stams.map(k=>`<option ${k===dStam?'selected':''}>${esc(k)}</option>`).join('')}</select>
     ${tabs.map(([k,t])=>`<button class="knop ${dTab===k&&!dSel?'':'zacht'}" style="min-height:44px;padding:8px 14px" onclick="dTab='${k}';dSel=null;tekenDocent()">${t}</button>`).join('')}
     <span style="flex:1"></span>
     <span class="zacht" style="font-size:13px">Opgehaald ${new Date(D.opgehaald||Date.now()).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}</span>
@@ -2803,8 +2809,8 @@ function dLeerlingen(sp){
   rijen.sort(k[dSort]||k.week);
   const th=(key,t)=>`<th style="cursor:pointer;${dSort===key?'color:var(--acc)':''}" onclick="dSort='${key}';tekenDocent()">${t}${dSort===key?' ▾':''}</th>`;
   return `<p class="zacht" style="margin:0 0 8px;font-size:14px">Klik op een kolomkop om te sorteren en op een naam voor alle details.</p>
-   <div class="kaart tabelwrap"><table><thead><tr><th>#</th>${th('naam','Leerling')}<th>Groep</th>${th('week','Deze week')}${th('tijd','Totaal')}${th('voortgang','Levels')}<th>Diploma\'s</th>${exN?th('examen','Examen'):''}${DOMEINEN.map(d=>`<th title="${d.naam}">${d.icoon}</th>`).join('')}${th('laatst','Laatst')}<th>ID · code</th></tr></thead><tbody>
-   ${rijen.map((r,i)=>{const s=r.s; return `<tr style="cursor:pointer" onclick="dSel='${esc(s.id)}';tekenDocent()"><td>${dSort==='naam'?'':i+1}</td><td><b style="color:var(--acc)">${esc(s.naam)}</b></td><td>${esc(s.klas)}</td><td>${minuten(s.tijdWeek)} min</td><td>${minuten(s.tijd)} min</td>
+   <div class="kaart tabelwrap"><table><thead><tr><th>#</th>${th('naam','Leerling')}<th>Cluster</th><th>Klas</th>${th('week','Deze week')}${th('tijd','Totaal')}${th('voortgang','Levels')}<th>Diploma\'s</th>${exN?th('examen','Examen'):''}${DOMEINEN.map(d=>`<th title="${d.naam}">${d.icoon}</th>`).join('')}${th('laatst','Laatst')}<th>ID · code</th></tr></thead><tbody>
+   ${rijen.map((r,i)=>{const s=r.s; return `<tr style="cursor:pointer" onclick="dSel='${esc(s.id)}';tekenDocent()"><td>${dSort==='naam'?'':i+1}</td><td><b style="color:var(--acc)">${esc(s.naam)}</b></td><td>${esc(s.klas)}</td><td>${esc(s.stam||'–')}</td><td>${minuten(s.tijdWeek)} min</td><td>${minuten(s.tijd)} min</td>
      <td style="min-width:110px"><div class="balk" title="${r.brons} van ${totLv}"><i style="width:${Math.round(r.brons/totLv*100)}%"></i></div><span style="font-size:12px" class="zacht">${r.brons}/${totLv}</span></td>
      <td>${r.dipl?'🎓 '+r.dipl:'–'}</td>${exN?`<td>${r.ex==null?'–':r.ex+'/'+exN}</td>`:''}${DOMEINEN.map(d=>`<td>${dc((s.dom||{})[d.id])}</td>`).join('')}
      <td style="font-size:13px">${datumKort(s.laatst)}</td><td style="font-size:12px">${esc(s.id||'')}<br>${esc(s.code||'')}</td></tr>`}).join('')}
@@ -2885,11 +2891,11 @@ function dExamen(sp){
 }
 
 function dCsv(){
-  if(!D) return; const sp=D.spelers.filter(s=>dKlas==='alle'||s.klas===dKlas);
-  const kop=['Naam','Groep','ID','Herstelcode','Minuten deze week','Minuten totaal','Levels brons','Diplomas','Examen beheerst'].concat(DOMEINEN.map(d=>d.naam),['Laatst actief']);
-  const r=sp.map(s=>[s.naam,s.klas,s.id,s.code,minuten(s.tijdWeek),minuten(s.tijd),bronsN(s),diplomaN(s),s.vr?exBeheerst(s):''].concat(DOMEINEN.map(d=>(s.dom||{})[d.id]??''),[s.laatst?new Date(s.laatst).toLocaleDateString('nl-NL'):'']));
+  if(!D) return; const sp=D.spelers.filter(s=>(dKlas==='alle'||s.klas===dKlas)&&(dStam==='alle'||s.stam===dStam));
+  const kop=['Naam','Cluster','Klas','ID','Herstelcode','Minuten deze week','Minuten totaal','Levels brons','Diplomas','Examen beheerst'].concat(DOMEINEN.map(d=>d.naam),['Laatst actief']);
+  const r=sp.map(s=>[s.naam,s.klas,s.stam||'',s.id,s.code,minuten(s.tijdWeek),minuten(s.tijd),bronsN(s),diplomaN(s),s.vr?exBeheerst(s):''].concat(DOMEINEN.map(d=>(s.dom||{})[d.id]??''),[s.laatst?new Date(s.laatst).toLocaleDateString('nl-NL'):'']));
   const csv='﻿'+[kop].concat(r).map(x=>x.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\n');
-  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=`economie4m_${dKlas}_${vandaag()}.csv`; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=`economie3m_${dKlas}_${vandaag()}.csv`; a.click();
 }
 
 // ===== Voortgang uit de oude H3-game (Economic Game 3 mavo, opslagsleutel 'economic-game-3-mavo-v2') =====

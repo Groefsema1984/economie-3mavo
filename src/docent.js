@@ -54,10 +54,12 @@ const tegel = (getal, label, sub) => `<div class="kaart" style="padding:14px"><d
 function tekenDocent(){
   const o=$('#dOut'); if(!o||!D) return;
   const klassen=[...new Set(D.spelers.map(s=>s.klas))].sort();
-  const sp=D.spelers.filter(s=>dKlas==='alle'||s.klas===dKlas);
+  const stams=[...new Set(D.spelers.map(s=>s.stam).filter(Boolean))].sort();
+  const sp=D.spelers.filter(s=>(dKlas==='alle'||s.klas===dKlas)&&(dStam==='alle'||s.stam===dStam));
   const tabs=[['overzicht','Overzicht'],['klassikaal','Klassikaal'],['leerlingen','Leerlingen'],['vragen','Vragen'],['eindtermen','Eindtermen'],['examen','Examentrainer']];
   const kopbalk=`<div class="voet" style="justify-content:flex-start;margin:0 0 12px;align-items:center">
-    <select style="max-width:170px" onchange="dKlas=this.value;dSel=null;tekenDocent()"><option value="alle">Alle groepen</option>${klassen.map(k=>`<option ${k===dKlas?'selected':''}>${esc(k)}</option>`).join('')}</select>
+    <select style="max-width:170px" onchange="dKlas=this.value;dSel=null;tekenDocent()"><option value="alle">Alle clusters</option>${klassen.map(k=>`<option ${k===dKlas?'selected':''}>${esc(k)}</option>`).join('')}</select>
+    <select style="max-width:150px" onchange="dStam=this.value;dSel=null;tekenDocent()"><option value="alle">Alle klassen</option>${stams.map(k=>`<option ${k===dStam?'selected':''}>${esc(k)}</option>`).join('')}</select>
     ${tabs.map(([k,t])=>`<button class="knop ${dTab===k&&!dSel?'':'zacht'}" style="min-height:44px;padding:8px 14px" onclick="dTab='${k}';dSel=null;tekenDocent()">${t}</button>`).join('')}
     <span style="flex:1"></span>
     <span class="zacht" style="font-size:13px">Opgehaald ${new Date(D.opgehaald||Date.now()).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}</span>
@@ -142,8 +144,8 @@ function dLeerlingen(sp){
   rijen.sort(k[dSort]||k.week);
   const th=(key,t)=>`<th style="cursor:pointer;${dSort===key?'color:var(--acc)':''}" onclick="dSort='${key}';tekenDocent()">${t}${dSort===key?' ▾':''}</th>`;
   return `<p class="zacht" style="margin:0 0 8px;font-size:14px">Klik op een kolomkop om te sorteren en op een naam voor alle details.</p>
-   <div class="kaart tabelwrap"><table><thead><tr><th>#</th>${th('naam','Leerling')}<th>Groep</th>${th('week','Deze week')}${th('tijd','Totaal')}${th('voortgang','Levels')}<th>Diploma\'s</th>${exN?th('examen','Examen'):''}${DOMEINEN.map(d=>`<th title="${d.naam}">${d.icoon}</th>`).join('')}${th('laatst','Laatst')}<th>ID · code</th></tr></thead><tbody>
-   ${rijen.map((r,i)=>{const s=r.s; return `<tr style="cursor:pointer" onclick="dSel='${esc(s.id)}';tekenDocent()"><td>${dSort==='naam'?'':i+1}</td><td><b style="color:var(--acc)">${esc(s.naam)}</b></td><td>${esc(s.klas)}</td><td>${minuten(s.tijdWeek)} min</td><td>${minuten(s.tijd)} min</td>
+   <div class="kaart tabelwrap"><table><thead><tr><th>#</th>${th('naam','Leerling')}<th>Cluster</th><th>Klas</th>${th('week','Deze week')}${th('tijd','Totaal')}${th('voortgang','Levels')}<th>Diploma\'s</th>${exN?th('examen','Examen'):''}${DOMEINEN.map(d=>`<th title="${d.naam}">${d.icoon}</th>`).join('')}${th('laatst','Laatst')}<th>ID · code</th></tr></thead><tbody>
+   ${rijen.map((r,i)=>{const s=r.s; return `<tr style="cursor:pointer" onclick="dSel='${esc(s.id)}';tekenDocent()"><td>${dSort==='naam'?'':i+1}</td><td><b style="color:var(--acc)">${esc(s.naam)}</b></td><td>${esc(s.klas)}</td><td>${esc(s.stam||'–')}</td><td>${minuten(s.tijdWeek)} min</td><td>${minuten(s.tijd)} min</td>
      <td style="min-width:110px"><div class="balk" title="${r.brons} van ${totLv}"><i style="width:${Math.round(r.brons/totLv*100)}%"></i></div><span style="font-size:12px" class="zacht">${r.brons}/${totLv}</span></td>
      <td>${r.dipl?'🎓 '+r.dipl:'–'}</td>${exN?`<td>${r.ex==null?'–':r.ex+'/'+exN}</td>`:''}${DOMEINEN.map(d=>`<td>${dc((s.dom||{})[d.id])}</td>`).join('')}
      <td style="font-size:13px">${datumKort(s.laatst)}</td><td style="font-size:12px">${esc(s.id||'')}<br>${esc(s.code||'')}</td></tr>`}).join('')}
@@ -224,9 +226,9 @@ function dExamen(sp){
 }
 
 function dCsv(){
-  if(!D) return; const sp=D.spelers.filter(s=>dKlas==='alle'||s.klas===dKlas);
-  const kop=['Naam','Groep','ID','Herstelcode','Minuten deze week','Minuten totaal','Levels brons','Diplomas','Examen beheerst'].concat(DOMEINEN.map(d=>d.naam),['Laatst actief']);
-  const r=sp.map(s=>[s.naam,s.klas,s.id,s.code,minuten(s.tijdWeek),minuten(s.tijd),bronsN(s),diplomaN(s),s.vr?exBeheerst(s):''].concat(DOMEINEN.map(d=>(s.dom||{})[d.id]??''),[s.laatst?new Date(s.laatst).toLocaleDateString('nl-NL'):'']));
+  if(!D) return; const sp=D.spelers.filter(s=>(dKlas==='alle'||s.klas===dKlas)&&(dStam==='alle'||s.stam===dStam));
+  const kop=['Naam','Cluster','Klas','ID','Herstelcode','Minuten deze week','Minuten totaal','Levels brons','Diplomas','Examen beheerst'].concat(DOMEINEN.map(d=>d.naam),['Laatst actief']);
+  const r=sp.map(s=>[s.naam,s.klas,s.stam||'',s.id,s.code,minuten(s.tijdWeek),minuten(s.tijd),bronsN(s),diplomaN(s),s.vr?exBeheerst(s):''].concat(DOMEINEN.map(d=>(s.dom||{})[d.id]??''),[s.laatst?new Date(s.laatst).toLocaleDateString('nl-NL'):'']));
   const csv='﻿'+[kop].concat(r).map(x=>x.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\n');
-  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=`economie4m_${dKlas}_${vandaag()}.csv`; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=`economie3m_${dKlas}_${vandaag()}.csv`; a.click();
 }

@@ -5,13 +5,14 @@
  */
 const CFG = {
   DOCENT_CODE: '1103',        // code voor het docentenscherm in de app (zelf wijzigen!)
-  KLASSEN: ['3m.ec1', '3m.ec2', '3m.ec3'],    // toegestane klassen (gelijk aan KLASSEN in de app)
+  KLASSEN: ['3m.ec1', '3m.ec2', '3m.ec3'],    // clusters (economiegroepen), gelijk aan KLASSEN in de app
+  STAMKLASSEN: ['3ma', '3mb', '3mc', '3md'],  // stamklassen, gelijk aan STAMKLASSEN in de app
   MAX_MISLUKT: 10             // na zoveel foute herstelpogingen wordt herstellen geblokkeerd
 };
 
 const SP_KOP = ['Speler-ID', 'Naam', 'Klas', 'Herstelcode', 'Aangemaakt', 'Laatst gezien', 'Oefentijd totaal (min)',
   'Oefentijd deze week (min)', 'XP', 'Levels brons+', 'Eindtoetsen klaar', 'Consumptie', 'Arbeid en productie',
-  'Overheid', 'Internationaal', 'Rekenen', 'Mislukte herstelpogingen'];
+  'Overheid', 'Internationaal', 'Rekenen', 'Mislukte herstelpogingen', 'Stamklas'];
 const DOMEIN_IDS = ['con', 'arb', 'ovh', 'int', 'rek'];
 const DATA_KOL = 8;          // aantal kolommen voor de voortgang per leerling (elk max 45.000 tekens)
 const ET_DOMEIN = {'4A':'con','V1.5':'con','5A':'arb','6.':'ovh','V1.1':'ovh','V1.2':'ovh','V1.3':'ovh','7.':'int','K3':'rek'};
@@ -64,12 +65,13 @@ function nieuw_(d) {
   const naam = String(d.naam || '').trim().replace(/\s+/g, ' ').slice(0, 60);
   const klas = String(d.klas || '');
   if (naam.length < 3) throw new Error('Vul je naam in');
-  if (CFG.KLASSEN.indexOf(klas) < 0) throw new Error('Onbekende klas');
+  if (CFG.KLASSEN.indexOf(klas) < 0) throw new Error('Onbekend cluster');
+  const stam = CFG.STAMKLASSEN.indexOf(String(d.stam || '')) >= 0 ? String(d.stam) : '';
   const sp = sheet_('Spelers'); const ids = kolom_(sp, 1); const codes = kolom_(sp, 4).map(String);
   let id; do { id = klas.toUpperCase() + '-' + rndTekst_(4); } while (ids.indexOf(id) >= 0);
   let code; do { code = String(Math.floor(100000 + Math.random() * 900000)); } while (codes.indexOf(code) >= 0);
   const nu = new Date();
-  sp.appendRow([id, naam, klas, "'" + code, nu, nu, 0, 0, 0, 0, 0, '', '', '', '', '', 0]);
+  sp.appendRow([id, naam, klas, "'" + code, nu, nu, 0, 0, 0, 0, 0, '', '', '', '', '', 0, stam]);
   log_(id, naam, klas, 'nieuw', 0, 0);
   return { ok: true, id: id, code: code };
 }
@@ -89,7 +91,10 @@ function sync_(d) {
   const binnen = d.staat || {};
   const oud = leesStaat_(r.id);
   const nieuw = oud ? mergeStaat_(oud, binnen) : binnen;
-  nieuw.id = r.id; nieuw.naam = r.naam; nieuw.klas = r.klas; // naam en klas bepaalt de server
+  // stamklas: de leerling mag die zelf (opnieuw) kiezen in Account; anders geldt wat de server heeft
+  const stam = CFG.STAMKLASSEN.indexOf(String(binnen.stam || '')) >= 0 ? String(binnen.stam) : r.stam;
+  if (stam !== r.stam) sheet_('Spelers').getRange(r.rij, 18).setValue(stam);
+  nieuw.id = r.id; nieuw.naam = r.naam; nieuw.klas = r.klas; nieuw.stam = stam; // naam en cluster bepaalt de server
   delete nieuw.code;                                          // code niet in de data opslaan
   schrijfStaat_(r.id, nieuw);
   // samenvatting in Spelers
@@ -104,14 +109,14 @@ function sync_(d) {
 
 function overzicht_(d) {
   if (String(d.docentcode) !== String(CFG.DOCENT_CODE)) { Utilities.sleep(1500); throw new Error('Onjuiste docentcode'); }
-  const sp = sheet_('Spelers'); const rijen = sp.getLastRow() > 1 ? sp.getRange(2, 1, sp.getLastRow() - 1, 4).getValues() : [];
+  const sp = sheet_('Spelers'); const rijen = sp.getLastRow() > 1 ? sp.getRange(2, 1, sp.getLastRow() - 1, 18).getValues() : [];
   const data = {}; const db = sheet_('Data');
   if (db.getLastRow() > 1) db.getRange(2, 1, db.getLastRow() - 1, 2 + DATA_KOL).getValues().forEach(function (x) {
     try { data[x[0]] = JSON.parse(x.slice(2).map(String).join('')); } catch (e) {}
   });
   const spelers = rijen.filter(function (x) { return x[0]; }).map(function (x) {
     const s = data[x[0]] || {}; s.id = x[0]; s.naam = x[1]; s.klas = x[2];
-    const sam = samenvat_(s); sam.code = String(x[3]).replace(/^'/, ''); return sam;
+    const sam = samenvat_(s); sam.code = String(x[3]).replace(/^'/, ''); sam.stam = String(x[17] || s.stam || ''); return sam;
   });
   return { ok: true, spelers: spelers, klasmodus: leesKlasModus_() };
 }
@@ -133,8 +138,8 @@ function kolom_(b, k) { return b.getLastRow() > 1 ? b.getRange(2, k, b.getLastRo
 function zoek_(id) {
   id = String(id || '').toUpperCase(); if (!id) return null;
   const sp = sheet_('Spelers'); const ids = kolom_(sp, 1); const i = ids.map(function (x) { return String(x).toUpperCase(); }).indexOf(id); if (i < 0) return null;
-  const rij = i + 2; const v = sp.getRange(rij, 1, 1, 17).getValues()[0];
-  return { rij: rij, id: String(v[0]), naam: v[1], klas: v[2], code: String(v[3]).replace(/^'/, ''), mislukt: Number(v[16]) || 0 };
+  const rij = i + 2; const v = sp.getRange(rij, 1, 1, 18).getValues()[0];
+  return { rij: rij, id: String(v[0]), naam: v[1], klas: v[2], code: String(v[3]).replace(/^'/, ''), mislukt: Number(v[16]) || 0, stam: String(v[17] || '') };
 }
 function controleerCode_(r, code) {
   const sp = sheet_('Spelers');

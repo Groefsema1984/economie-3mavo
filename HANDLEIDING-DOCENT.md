@@ -51,7 +51,9 @@ Alle bedragen, rentes, koersen en munten in de vragen zijn fictief.
 **Docentendashboard** (knop Docent, docentcode **1103**)
 - Overzicht, Leerlingen (klik op een naam voor alles van die leerling), Klassikaal (zwakste onderwerpen, top 5 vaakst fout,
   proeftoetsen), Vragen (wat per vraag fout ging), Eindtermen (scores per eindterm) en Examentrainer.
-- Leerlingen kiezen bij de start hun cluster (3m.ec1, 3m.ec2 of 3m.ec3). In het dashboard filter je op cluster, zodat elke docent alleen de eigen groep ziet. Vernieuwen, CSV voor Excel en afdrukken.
+- Leerlingen kiezen bij de start hun cluster (3m.ec1, 3m.ec2 of 3m.ec3) en hun klas (3ma t/m 3md). In het dashboard filter je op cluster,
+  zodat elke docent alleen de eigen groep ziet, en eventueel ook op klas. De klas staat als kolom in de tabel en in de CSV.
+  Een leerling kan de klas later zelf aanpassen bij Account. Vernieuwen, CSV voor Excel en afdrukken.
 
 ## Oude H3-game en voortgang van leerlingen
 
@@ -80,13 +82,20 @@ de app de oude voortgang zelf en krijgt de leerling op de startpagina de knop **
 Na 10 foute herstelpogingen wordt een account geblokkeerd. Vrijgeven: zet in het tabblad *Spelers* de kolom
 "Mislukte herstelpogingen" op 0.
 
+## Nieuwe servercode zetten (na een update van `server/Code.gs`)
+
+1. Open je spreadsheet "Economie 3M – server" en kies **Extensies › Apps Script**.
+2. Vervang alle code door de nieuwe `server/Code.gs` en klik op Opslaan.
+3. Kies de functie **setup** en klik op **Uitvoeren** (zet nieuwe kolomkoppen neer; er gaat niets verloren).
+4. **Implementeren › Implementaties beheren › potlood › Versie: Nieuwe versie › Implementeren.** De URL blijft gelijk.
+
 ## Server installeren op je schoolaccount (eenmalig, ongeveer 10 minuten, gratis)
 
 Gebruik een **eigen, nieuwe** spreadsheet, niet die van de 4 mavo-app.
 
 1. Log in met je schoolaccount op sheets.google.com en maak een lege spreadsheet "Economie 3M – server". Deel hem met niemand.
 2. Kies **Extensies › Apps Script**. Verwijder de voorbeeldcode en plak de inhoud van `server/Code.gs`. Klik op Opslaan.
-3. Controleer bovenaan `CFG`: `DOCENT_CODE: '1103'` en `KLASSEN: ['3m.ec1', '3m.ec2', '3m.ec3']` (de clusters). Pas de clusters aan als ze veranderen
+3. Controleer bovenaan `CFG`: `DOCENT_CODE: '1103'` `KLASSEN: ['3m.ec1', '3m.ec2', '3m.ec3']` (de clusters) en `STAMKLASSEN: ['3ma', '3mb', '3mc', '3md']`. Pas de clusters aan als ze veranderen
    (dezelfde namen moeten in `src/core.js` bij `KLASSEN` staan; Claude past dat aan).
 4. Kies de functie **setup** en klik op **Uitvoeren**. Geef toestemming (Geavanceerd › Ga naar … › Toestaan).
    Er verschijnen de tabbladen Spelers, Data en Logboek.

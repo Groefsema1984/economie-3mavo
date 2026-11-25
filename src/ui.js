@@ -47,6 +47,7 @@ welkom(){
    <div class="kaart"><span class="eyebrow" style="color:var(--knop)">Eerste keer</span><h3 style="margin:6px 0 0">Ik ben nieuw</h3>
     <label class="label">Je voor- en achternaam</label><input type="text" id="wNaam" autocomplete="name">
     <label class="label">Je economiegroep (cluster)</label><select id="wKlas">${opties}</select>
+    <label class="label">Je klas</label><select id="wStam"><option value="">Kies je klas…</option>${STAMKLASSEN.map(k=>`<option>${k}</option>`).join('')}</select>
     <div class="voet"><button class="knop vol" onclick="nieuwAccount()">Account maken</button></div></div>
    ${serverModus()?`<div class="kaart"><span class="eyebrow" style="color:var(--knop)">Terugkomen</span><h3 style="margin:6px 0 0">Ik heb al een account</h3>
     <p class="zacht" style="margin:6px 0 0;font-size:15px">Nieuwe iPad, of de app opnieuw geopend? Vul je speler-ID en herstelcode in. Je voortgang komt terug.</p>
@@ -91,7 +92,7 @@ home(){
   return `<div class="wrap"><div class="dash">
    <aside class="links">
     <div class="kaart profielkaart"><div class="bg"></div><div class="avatar">${esc(initialen(S.naam))}</div>
-     <h2>${esc(S.naam)}</h2><div class="klas">${esc(S.klas||'')} · Economie 3 mavo</div>
+     <h2>${esc(S.naam)}</h2><div class="klas">${esc(S.klas||'')}${S.stam?' · '+esc(S.stam):''} · Economie 3 mavo</div>
      <div class="cijfers"><div><small>Minuten</small><span class="getal">${minuten(S.tijd)}</span></div><div><small>Diploma's</small><span class="getal">${dipl}/${WERELDEN.length}</span></div><div><small>Kaarten</small><span class="getal">${S.kaarten.length}</span></div></div>
      <div class="blok"><small>Je streak</small><div class="streak"><div class="vlam">🔥<b>${streak}</b>${streak===1?'week':'weken'}</div><div class="dagen">${dagen}</div></div></div>
      <div class="blok mijlpaal"><small>Punten en munten</small><b>⭐ ${S.xp}</b> &nbsp; <b>🪙 ${munten()}</b></div>
@@ -180,7 +181,8 @@ collectie(){
 account(){
   const st=serverModus()?(syncStatus==='ok'?`<span class="sync ok">✔ Opgeslagen op de server${syncTijd?' om '+new Date(syncTijd).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'}):''}</span>`:syncStatus==='fout'?`<span class="sync fout">Nog niet opgeslagen op de server (${esc(syncFout)}). Dit gebeurt vanzelf als er internet is.</span>`:'<span class="sync">Nog niet gesynchroniseerd</span>'):'<span class="sync">Testmodus: alleen op dit apparaat</span>';
   return `<div class="wrap" style="max-width:640px">${kop('Account','go(\'home\')')}
-   <div class="kaart"><p style="margin-top:0"><b>${esc(S.naam)}</b> · ${esc(S.klas)}</p>
+   <div class="kaart"><p style="margin-top:0"><b>${esc(S.naam)}</b> · ${esc(S.klas)}${S.stam?' · klas '+esc(S.stam):''}</p>
+    <label class="label">Je klas</label><select onchange="S.stam=this.value;bewaar();melding('Klas opgeslagen')" style="max-width:200px"><option value="">Kies je klas…</option>${STAMKLASSEN.map(k=>`<option ${S.stam===k?'selected':''}>${k}</option>`).join('')}</select>
     <p class="zacht" style="margin-bottom:2px">Speler-ID</p><div class="code">${esc(S.id||'–')}</div>
     <p class="zacht" style="margin-bottom:2px">Herstelcode</p><div class="code">${esc(S.code||'–')}</div>
     <p id="syncStat" style="margin-top:12px">${st}</p>
@@ -199,11 +201,12 @@ docent(){
 
 // ===== Account =====
 async function nieuwAccount(){
-  const naam=$('#wNaam').value.trim().replace(/\s+/g,' '), klas=$('#wKlas').value;
+  const naam=$('#wNaam').value.trim().replace(/\s+/g,' '), klas=$('#wKlas').value, stam=$('#wStam').value;
   if(naam.length<3||!naam.includes(' ')){ melding('Vul je voor- én achternaam in'); return }
-  S=nieuweStaat(); S.naam=naam; S.klas=klas;
+  if(!stam){ melding('Kies je klas'); return }
+  S=nieuweStaat(); S.naam=naam; S.klas=klas; S.stam=stam;
   if(serverModus()){
-    try{ const j=await api('nieuw',{naam,klas}); S.id=j.id; S.code=j.code; bewaar(false); await sync(); go('code'); }
+    try{ const j=await api('nieuw',{naam,klas,stam}); S.id=j.id; S.code=j.code; bewaar(false); await sync(); go('code'); }
     catch(e){ S=null; melding('Geen verbinding met de server. Probeer het opnieuw. ('+e.message+')',4000) }
   } else { S.id='LOKAAL-'+Math.random().toString(36).slice(2,6).toUpperCase(); bewaar(false); go('home') }
 }
@@ -423,10 +426,10 @@ function samenvatLokaal(){ return samenvat(S) }
 function samenvat(s){ // zelfde berekening als op de server
   const dom={}; DOMEINEN.forEach(d=>{ const sc=Object.keys(EINDTERMEN).filter(k=>EINDTERMEN[k].d===d.id).map(k=>{const et=(s.et||{})[k]; if(!et||et.r.length<3) return null; let a=0,w=0; et.r.forEach((x,i)=>{a+=x*(i+1);w+=i+1}); return Math.round(a/w*100)}).filter(x=>x!==null); dom[d.id]=sc.length?Math.round(sc.reduce((a,b)=>a+b,0)/sc.length):null });
   const fout={}; Object.entries(s.vr||{}).forEach(([k,r])=>{ if(r.f) fout[k]=r.f });
-  return {id:s.id,naam:s.naam,klas:s.klas,code:s.code,laatst:s.upd,tijd:s.tijd||0,tijdWeek:(s.week||{})[weekId()]||0,xp:s.xp||0,lv:s.lv||{},toets:s.toets||{},dom,fout,et:s.et||{},vr:s.vr||{},week:s.week||{},dag:s.dag||{},nk:(s.kaarten||[]).length,badges:s.badges||[],sprint:s.sprint||null,pt:s.pt||{},exr:s.exr||{},kv:s.kv||null,herhaal:(s.herhaal||[]).length,aangemaakt:s.aangemaakt||0,munten:(s.mVerd||0)-(s.mUit||0)};
+  return {stam:s.stam||'', id:s.id,naam:s.naam,klas:s.klas,code:s.code,laatst:s.upd,tijd:s.tijd||0,tijdWeek:(s.week||{})[weekId()]||0,xp:s.xp||0,lv:s.lv||{},toets:s.toets||{},dom,fout,et:s.et||{},vr:s.vr||{},week:s.week||{},dag:s.dag||{},nk:(s.kaarten||[]).length,badges:s.badges||[],sprint:s.sprint||null,pt:s.pt||{},exr:s.exr||{},kv:s.kv||null,herhaal:(s.herhaal||[]).length,aangemaakt:s.aangemaakt||0,munten:(s.mVerd||0)-(s.mUit||0)};
 }
 async function laadDocent(){ const c=$('#dCode').value.trim(); try{ const j=await api('overzicht',{docentcode:c}); toonDocent(j) }catch(e){ melding(e.message,4000) } }
-let D=null, dKlas='alle', dSort='week';
+let D=null, dKlas='alle', dStam='alle', dSort='week';
 function toonDocent(j){ D=j; tekenDocent() }
 function tekenDocent(){
   const klassen=[...new Set(D.spelers.map(s=>s.klas))].sort();

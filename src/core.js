@@ -1,7 +1,8 @@
 // ===== Instellingen =====
 // URL van het Apps Script (web-app, eindigt op /exec). Leeg = alleen opslag op dit apparaat (testmodus).
 const DATA_ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbyosqsIuZqbOkFSfZ43sOVlHNNnMb_M-qOxsWVZx-yTb9F1XTX4wwsf-er3fSPdE3ERJg/exec";
-const KLASSEN = ['3m.ec1','3m.ec2','3m.ec3'];           // klassen waaruit leerlingen kiezen
+const KLASSEN = ['3m.ec1','3m.ec2','3m.ec3'];           // clusters (economiegroepen) waaruit leerlingen kiezen
+const STAMKLASSEN = ['3ma','3mb','3mc','3md'];          // stamklassen
 const KEY = 'eco3m-v1';                  // opslagsleutel op het apparaat
 const VERSIE = '1.0';
 const VRAGEN_PER_LEVEL = 8;
@@ -67,7 +68,7 @@ function parseGetal(s){ if(s==null) return NaN; s=String(s).trim().replace(/[−
 function nieuweStaat(){
   return {v:1, id:'', code:'', naam:'', klas:'', upd:0, aangemaakt:Date.now(),
     xp:0, mVerd:0, mUit:0, tijd:0, dag:{}, week:{},
-    lv:{}, toets:{}, vr:{}, et:{}, kaarten:[], badges:[], gekocht:['standaard'], thema:'standaard', herhaal:[], hgoed:{}}
+    stam:'', lv:{}, toets:{}, vr:{}, et:{}, kaarten:[], badges:[], gekocht:['standaard'], thema:'standaard', herhaal:[], hgoed:{}}
 }
 let S = null;
 
